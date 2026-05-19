@@ -12,7 +12,7 @@ static const double XI_JUMP = M_PI / 4.0;
 static const double MU1     = 1.0;   // Левое ГУ (поток, Нейман)
 static const double MU2     = 0.0;   // Правое ГУ (значение, Дирихле)
 
-double k1(double x) { return std::sqrt(2.0) + std::sin(x); }
+double k1(double x) { return std::sqrt(2.0) * std::sin(x); }
 double k2(double x) { return std::pow(std::cos(x), 2); }
 
 double q1(double x) { return 1.0; }
