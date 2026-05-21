@@ -2,4 +2,4 @@
 #add_subdirectory(p2_first_main)
 add_subdirectory(p3_mixed_test_cls)
 #add_subdirectory(p4_mixed_main_imp)
-#add_subdirectory(p5_mixed_test_imp)
+add_subdirectory(p5_mixed_test_imp)
