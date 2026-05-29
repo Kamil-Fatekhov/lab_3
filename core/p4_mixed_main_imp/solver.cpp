@@ -12,7 +12,7 @@ static const double MU1     = 1.0;   // Теперь это значение u(0
 static const double MU2     = 0.0;   // Теперь это поток w(1) - Нейман
 
 // Функции коэффициентов (Вариант 5)
-double k1(double x) { return std::sqrt(2.0) * std::sin(x); }
+double k1(double x) { return std::sqrt(2.0) * std::sin(x) + 0.1; }
 double k2(double x) { return std::pow(std::cos(x), 2); }
 double q1(double x) { return 1.0; }
 double q2(double x) { return x * x; }
