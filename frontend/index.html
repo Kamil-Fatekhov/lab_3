@@ -131,12 +131,14 @@ async function runCalculation() {
 
 function updateUI(data, id, n) {
     const tbody = document.getElementById('dataTable');
-    tbody.innerHTML = '';
     
     let maxErr = -1;
     let maxX = 0;
     const errors = [];
     const diffs = [];
+
+    // 1. Сначала собираем все строки в одну длинную строку (в памяти)
+    let rowsHtml = ''; 
 
     data.x.forEach((x, i) => {
         const u = data.u[i];
@@ -152,7 +154,8 @@ function updateUI(data, id, n) {
             maxX = x;
         }
 
-        tbody.innerHTML += `
+        // Вместо tbody.innerHTML += пишем в переменную
+        rowsHtml += `
             <tr>
                 <td class="text-muted small">${i}</td>
                 <td>${x.toFixed(4)}</td>
@@ -162,6 +165,9 @@ function updateUI(data, id, n) {
                 <td>${absErr.toExponential(3)}</td>
             </tr>`;
     });
+
+    // 2. И только ОДИН РАЗ обновляем таблицу в браузере
+    tbody.innerHTML = rowsHtml;
 
     // Обновляем параметры (Справка)
     document.getElementById('statsRow').style.display = 'flex';

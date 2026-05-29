@@ -15,7 +15,7 @@ static const double MU2 = 0.0;       // u(1) = mu2
 
 // ── Коэффициенты ─────────────────────────────────────────────────────────────
 
-double k1(double x) { return std::sqrt(2.0) * std::sin(x); }
+double k1(double x) { return std::sqrt(2.0) * std::sin(x) + 0.1; }
 double k2(double x) { return std::cos(x) * std::cos(x); }
 double q1(double x) { (void)x; return 1.0; }
 double q2(double x) { return x * x; }
