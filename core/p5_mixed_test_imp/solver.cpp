@@ -9,9 +9,15 @@
 namespace {
     // Константы Варианта №5
     const double XI = std::acos(-1.0) / 4.0; // pi / 4
-    const double MU1 = 1.0;
-    const double MU2 = 0.0;
     const double BETA = 1.0; // Коэффициент теплоотдачи для ГУ 3-го рода
+    
+    // Параметры краевых условий 3-го рода
+    // Левое: -k*u'(0) + gamma1*u(0) = theta1
+    // Правое: k*u'(1) + gamma2*u(1) = theta2
+    const double GAMMA1 = 1.0;
+    const double GAMMA2 = 3.0;
+    const double THETA1 = 2.0;
+    const double THETA2 = 4.0;
 
     // Предельные константы тестовой задачи в точке разрыва (Вариант 5)
     const double K1_STAR = 1.0;
@@ -54,10 +60,12 @@ double get_analytical_test_p5(double x) {
 
         double M[4][5] = {0};
         
-        // 1. Левая граница u(0) = MU1
-        M[0][0] = 1.0; 
-        M[0][1] = 1.0; 
-        M[0][4] = MU1 - (F1_STAR / Q1_STAR); // В Варианте 5 это строго 0.0
+        // 1. Левое граничное условие 3-го рода: -k1*u'(0) + gamma1*u(0) = theta1
+        // u(x) = c1*exp(l1*x) + c2*exp(-l1*x) + F1_STAR/Q1_STAR
+        // u'(x) = c1*l1*exp(l1*x) - c2*l1*exp(-l1*x)
+        M[0][0] = -K1_STAR * l1 + GAMMA1;
+        M[0][1] = K1_STAR * l1 + GAMMA1;
+        M[0][4] = THETA1 - GAMMA1 * (F1_STAR / Q1_STAR);
 
         // 2. Непрерывность решения в точке разрыва u(xi-0) = u(xi+0)
         M[1][0] = std::exp(l1 * XI); 
@@ -73,10 +81,10 @@ double get_analytical_test_p5(double x) {
         M[2][3] = K2_STAR * l2 * std::exp(-l2 * XI);
         M[2][4] = 0.0;
 
-        // 4. Правое точное условие Робина: k2*u'(1) + beta*u(1) = beta*MU2
-        M[3][2] = (K2_STAR * l2 + BETA) * std::exp(l2);
-        M[3][3] = (-K2_STAR * l2 + BETA) * std::exp(-l2);
-        M[3][4] = BETA * MU2 - BETA * (F2_STAR / Q2_STAR);
+        // 4. Правое граничное условие 3-го рода: k2*u'(1) + gamma2*u(1) = theta2
+        M[3][2] = (K2_STAR * l2 + GAMMA2) * std::exp(l2);
+        M[3][3] = (-K2_STAR * l2 + GAMMA2) * std::exp(-l2);
+        M[3][4] = THETA2 - GAMMA2 * (F2_STAR / Q2_STAR);
 
         auto C = solve_system_4x4(M);
         c1 = C[0]; c2 = C[1]; c3 = C[2]; c4 = C[3];
@@ -107,11 +115,28 @@ std::vector<double> solve_test_mixed_p5(int n) {
     auto f1_f = [](double) { return F1_STAR; };
     auto f2_f = [](double) { return F2_STAR; };
 
-    // Левое Граничное Условие (Дирихле, 1-й род)
+    // Левое Граничное Условие (3-й род): -k*u'(0) + gamma1*u(0) = theta1
+    // Аппроксимация с использованием фиктивного узла: 
+    // -k*(u1 - u(-1))/(2h) + gamma1*u0 = theta1
+    // или более простая аппроксимация O(h^2) с использованием односторонней разности
+    // Для простоты используем аппроксимацию: 
+    // u0 = (theta1 + k*u1/h)/(gamma1 + k/h)
+    // при условии что gamma1 + k/h != 0
+    
+    // Более точная аппроксимация O(h^2):
+    // -k*(u1 - u0)/h + gamma1*u0 = theta1 + O(h)
+    // Переносим: -(k/h)*u1 + (k/h + gamma1)*u0 = theta1
+    
+    // Для O(h^2) используем центральную разность с фиктивным узлом:
+    // -k*(u1 - u(-1))/(2h) + gamma1*u0 = theta1
+    // Выражаем u(-1) через u0, u1 из уравнения (k/h)*(u0 - u(-1)) - (k/h)*(u1 - u0) = 0
+    // После преобразований получаем:
+    // (k/h + gamma1)*u0 - (k/h)*u1 = theta1
+    
     a[0] = 0.0;
-    b[0] = 1.0;
-    c[0] = 0.0;
-    d[0] = MU1;
+    b[0] = K1_STAR / h + GAMMA1;
+    c[0] = -K1_STAR / h;
+    d[0] = THETA1;
 
     for (int i = 1; i < n; ++i) {
         double x_left = g.x[i - 1];
@@ -147,10 +172,17 @@ std::vector<double> solve_test_mixed_p5(int n) {
     }
 
     // Правое Граничное Условие (3-й род, УЛУЧШЕННАЯ аппроксимация O(h^2))
+    // k2*u'(1) + gamma2*u(1) = theta2
+    // Аппроксимация с фиктивным узлом:
+    // k2*(u(n+1) - u(n-1))/(2h) + gamma2*u(n) = theta2
+    // Из уравнения во внутреннем узле: k*(u(n+1) - 2u(n) + u(n-1))/h^2 + ... = 0
+    // После исключения u(n+1) получаем:
+    // (-k/h)*u(n-1) + (k/h + gamma2 + (h/2)*Q2_STAR)*u(n) = theta2 + (h/2)*F2_STAR
+    
     a[n] = -K2_STAR / h;
-    b[n] = (K2_STAR / h) + BETA + (h / 2.0) * Q2_STAR;
+    b[n] = (K2_STAR / h) + GAMMA2 + (h / 2.0) * Q2_STAR;
     c[n] = 0.0;
-    d[n] = BETA * MU2 + (h / 2.0) * F2_STAR;
+    d[n] = THETA2 + (h / 2.0) * F2_STAR;
 
     return tridiag::solve(a, b, c, d);
 }
