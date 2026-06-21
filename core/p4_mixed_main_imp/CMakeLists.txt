@@ -7,4 +7,4 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../shared)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../shared)
 
-add_executable(main_imp main.cpp solver.cpp)
+add_library(p4_mixed_main_imp_lib main.cpp solver.cpp)

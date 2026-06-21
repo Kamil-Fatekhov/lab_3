@@ -126,3 +126,15 @@ public:
         return max_err;
     }
 };
+
+// В самый конец файла core/p1_first_test/solver.h
+
+inline std::vector<double> solve_p1_task(int n) {
+    BalanceSolver solver(n);
+    return solver.solve();
+}
+
+inline double get_analytical_p1(double x) {
+    TaskConfig cfg;
+    return cfg.exact_solution(x);
+}

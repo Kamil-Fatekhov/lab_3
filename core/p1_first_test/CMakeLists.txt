@@ -1,10 +1,11 @@
-find_package(MPI REQUIRED)
+# core/p1_first_test/CMakeLists.txt
+cmake_minimum_required(VERSION 3.10)
 
-if(MPI_CXX_FOUND)
-    add_executable(solver main.cpp)
-    target_link_libraries(solver PRIVATE MPI::MPI_CXX)
-    
-    target_compile_definitions(solver PRIVATE _USE_MATH_DEFINES)
-else()
-    message(WARNING "MPI не найден! Лаба 3 (p1_first_test) не будет собрана.")
-endif()
+# Создаем интерфейсную (header-only) библиотеку, так как solver.cpp не существует
+add_library(p1_first_test_lib INTERFACE)
+
+# Говорим CMake, где серверу искать файлы math_utils.h и solver.h
+target_include_directories(p1_first_test_lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Добавляем дефайны, которые автоматически применятся ко всем, кто подключит эту либу
+target_compile_definitions(p1_first_test_lib INTERFACE _USE_MATH_DEFINES)

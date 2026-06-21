@@ -82,13 +82,17 @@ inline double integrate_simpson(
  * Используется как коэффициент a_{i+1} = k_hat_{i+1/2} / h²
  * (или c_i = k_hat_{i+1/2} / h²  в зависимости от обозначений).
  */
+
 inline double k_half(
     const std::function<double(double)>& k,
     double xi, double xi1,
     int steps = 100)
 {
     double h = xi1 - xi;
-    return integrate_simpson(k, xi, xi1, steps) / h;
+    // ∫(1/k)dx по [xi, xi1]
+    auto inv_k = [&k](double x){ return 1.0 / k(x); };
+    double integral = integrate_simpson(inv_k, xi, xi1, steps);
+    return h / integral;  // h / ∫(1/k)dx
 }
  
 /**
@@ -129,17 +133,20 @@ inline double f_bar(
  *
  * Используется для вычисления a_m и c_{m-1} вблизи разрыва.
  */
+
 inline double k_half_jump(
     const std::function<double(double)>& k1,
     const std::function<double(double)>& k2,
     double xi_node, double xi1_node,
-    double xi_jump,               // точка разрыва ξ
+    double xi_jump,
     int steps = 100)
 {
     double h = xi1_node - xi_node;
-    double left_part  = integrate_simpson(k1, xi_node,  xi_jump,  steps);
-    double right_part = integrate_simpson(k2, xi_jump,  xi1_node, steps);
-    return (left_part + right_part) / h;
+    auto inv_k1 = [&k1](double x){ return 1.0 / k1(x); };
+    auto inv_k2 = [&k2](double x){ return 1.0 / k2(x); };
+    double left  = integrate_simpson(inv_k1, xi_node,  xi_jump,   steps);
+    double right = integrate_simpson(inv_k2, xi_jump,  xi1_node,  steps);
+    return h / (left + right);
 }
  
 /**
