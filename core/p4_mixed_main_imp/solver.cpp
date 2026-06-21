@@ -9,8 +9,12 @@
 
 // Параметры 5 варианта — единственное место определения
 static const double XI_JUMP = M_PI / 4.0;
-static const double MU1     = 1.0;   // Левое ГУ (поток, Нейман)
-static const double MU2     = 0.0;   // Правое ГУ (значение, Дирихле)
+
+// Краевые условия 3-го рода: -k*u'(0) + γ₁*u(0) = θ₁,  k*u'(1) + γ₂*u(1) = θ₂
+static const double GAMMA1  = 1.0;
+static const double THETA1  = 2.0;
+static const double GAMMA2  = 3.0;
+static const double THETA2  = 4.0;
 
 double k1(double x) { return std::sqrt(2.0) * std::sin(x); }
 double k2(double x) { return std::pow(std::cos(x), 2); }
@@ -32,15 +36,17 @@ BVP_Result solve_mixed_main_imp(int n) {
     std::vector<double> c(num_nodes, 0.0);
     std::vector<double> d(num_nodes, 0.0);
 
-    // 1. Левое ГУ (i = 0): Нейман, улучшенная аппроксимация O(h^2)
-    double k_half   = grid::k_half(k1, 0.0, g.half(0));
-    double q_bar_0  = grid::q_bar(q1, 0.0, g.half(0));
-    double f_bar_0  = grid::f_bar(f1, 0.0, g.half(0));
+    // 1. Левое ГУ (i = 0): 3-го рода, -k*u'(0) + γ₁*u(0) = θ₁
+    //    Аппроксимация балансом на [0, h/2]:
+    //    (k_{1/2}/h)*(u₀ - u₁) + (γ₁ + q̄₀*(h/2))*u₀ = f̄₀*(h/2) + θ₁
+    double k_half_left = grid::k_half(k1, 0.0, g.half(0));
+    double q_bar_0     = grid::q_bar(q1, 0.0, g.half(0));
+    double f_bar_0     = grid::f_bar(f1, 0.0, g.half(0));
 
     a[0] = 0.0;
-    b[0] = (k_half / h) + q_bar_0 * (h / 2.0);
-    c[0] = -(k_half / h);
-    d[0] = f_bar_0 * (h / 2.0) + MU1;
+    b[0] = (k_half_left / h) + GAMMA1 + q_bar_0 * (h / 2.0);
+    c[0] = -(k_half_left / h);
+    d[0] = f_bar_0 * (h / 2.0) + THETA1;
 
     int m = grid::jump_node(g, XI_JUMP);
 
@@ -81,13 +87,19 @@ BVP_Result solve_mixed_main_imp(int n) {
         d[i] = f_cell * h;
     }
 
-    // 3. Правое ГУ (i = n): Дирихле
-    a[n] = 0.0;
-    b[n] = 1.0;
+    // 3. Правое ГУ (i = n): 3-го рода, k*u'(1) + γ₂*u(1) = θ₂
+    //    Аппроксимация балансом на [x_{n-1/2}, 1]:
+    //    (k_{n-1/2}/h)*(uₙ - u_{n-1}) + (γ₂ + q̄ₙ*(h/2))*uₙ = f̄ₙ*(h/2) + θ₂
+    double k_half_right = grid::k_half(k2, g.x[n - 1], g.x[n]);
+    double q_bar_n      = grid::q_bar(q2, g.half(n - 1), 1.0);
+    double f_bar_n      = grid::f_bar(f2, g.half(n - 1), 1.0);
+
+    a[n] = -(k_half_right / h);
+    b[n] = (k_half_right / h) + GAMMA2 + q_bar_n * (h / 2.0);
     c[n] = 0.0;
-    d[n] = MU2;
+    d[n] = f_bar_n * (h / 2.0) + THETA2;
 
     return BVP_Result(g, tridiag::solve(a, b, c, d),
-                      XI_JUMP, MU1, MU2,
-                      "neumann", "dirichlet");
+                      XI_JUMP, GAMMA1, THETA1, GAMMA2, THETA2,
+                      "robin", "robin");
 }
